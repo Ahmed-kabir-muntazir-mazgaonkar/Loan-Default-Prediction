@@ -3,7 +3,6 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
 
 # ---------------------------
 # Page Config
@@ -20,7 +19,7 @@ st.set_page_config(
 # ---------------------------
 @st.cache_resource
 def load_model():
-    with open("loan_model.pkl", "rb") as f:   # 🔹 Notebook me bhi yahi naam rakho
+    with open("loan_model.pkl", "rb") as f:
         model = pickle.load(f)
     with open("scaler.pkl", "rb") as f:
         scaler = pickle.load(f)
@@ -38,6 +37,7 @@ with st.sidebar:
     - **Income**
     - **Loan Amount**
     - **Employment Status**
+    - **Loan-to-Income Ratio**
     """)
     st.divider()
     st.markdown("**How to use:**")
@@ -63,17 +63,17 @@ with col1:
         st.subheader("Applicant Details")
 
         income = st.number_input(
-            "Monthly Income (₹)",
+            "Monthly Income ($)",
             min_value=0,
-            max_value=10000000,
+            max_value=100000,
             value=5000,
-            step=1000
+            step=100
         )
 
         loan_amount = st.number_input(
-            "Loan Amount (₹)",
+            "Loan Amount ($)",
             min_value=0,
-            max_value=50000000,
+            max_value=500000000,
             value=20000,
             step=1000
         )
@@ -91,11 +91,14 @@ with col1:
 # ---------------------------
 with col2:
     if submitted:
-        # Encode employment status (same as training)
+        # Encode employment status
         emp = 1 if employment_status == "Employed" else 0
 
-        # Match feature order from training: ['income', 'loan_amount', 'employment_status']
-        data = np.array([[income, loan_amount, emp]])
+        # New feature: loan_to_income_ratio
+        loan_to_income_ratio = loan_amount / (income + 1)
+
+        # Match feature order: ['income', 'loan_amount', 'employment_status', 'loan_to_income_ratio']
+        data = np.array([[income, loan_amount, emp, loan_to_income_ratio]])
         data_scaled = scaler.transform(data)
 
         # Prediction
@@ -110,7 +113,11 @@ with col2:
         else:
             st.success("✅ Low Default Risk (Probability: {:.1f}%)".format(proba[0]*100))
 
-        # Business Rule Adjustment (Optional)
+        # Extra warnings (Business Rules)
+        if loan_amount > income * 50:
+            st.warning("⚠️ Loan amount is extremely high compared to income. "
+                       "Real-world risk is likely HIGH even if model shows low risk.")
+
         if employment_status == "Unemployed" and prediction == 0:
             st.warning("⚠️ Note: Unemployed applicants usually carry higher risk in real scenarios.")
 
@@ -125,10 +132,10 @@ with col2:
                 ha='center', va='center', color='white', fontsize=12)
         st.pyplot(fig)
 
-        # Feature importance (Random Forest / Tree models)
+        # Feature importance
         if hasattr(model, 'feature_importances_'):
             st.subheader("Key Decision Factors")
-            features = ['Income', 'Loan Amount', 'Employment Status']
+            features = ['Income', 'Loan Amount', 'Employment Status', 'Loan-to-Income Ratio']
             importances = model.feature_importances_
 
             fig2, ax2 = plt.subplots()
@@ -144,13 +151,18 @@ with st.expander("📊 Model Performance Metrics"):
     st.subheader("Model Evaluation")
     st.markdown("""
     **Performance on Test Data:**  
-    (Replace with your Notebook results)
-    - Accuracy: 92%  
-    - Precision: 89%  
-    - Recall: 85%  
-    - F1 Score: 87%  
+    - Accuracy: 69%  
+    - Precision (Repaid / Class 0): 0.76  
+    - Recall (Repaid / Class 0): 0.69  
+    - F1 Score (Repaid / Class 0): 0.72  
+
+    - Precision (Default / Class 1): 0.61  
+    - Recall (Default / Class 1): 0.69  
+    - F1 Score (Default / Class 1): 0.65  
     """)
-    cm = np.array([[850, 50], [75, 425]])  # Replace with your confusion matrix
+
+    cm = np.array([[81, 36],
+                   [26, 57]])  # From your Notebook
     fig3, ax3 = plt.subplots()
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=['Repaid', 'Default'],
@@ -171,7 +183,7 @@ with st.expander("ℹ️ About This App"):
     The model was trained on a dataset containing:
     - Historical loan applications
     - Balanced representation of default/non-default cases
-    - Features including income, loan amount, and employment status
+    - Features including income, loan amount, employment status, and loan-to-income ratio
 
     ### Limitations
     - Predictions are based solely on the provided financial information
