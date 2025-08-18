@@ -149,8 +149,8 @@ with col2:
             shap_vals = shap_values[0]
 
         # Ensure 1D float array and align with features
-       shap_vals = np.array(shap_vals).flatten()
-       shap_vals = shap_vals[:len(features)]  # trim to same length
+    shap_vals = np.array(shap_vals).flatten()
+    shap_vals = shap_vals[:len(features)]  # trim to same length
 
        # Show feature impacts
        for i, feature in enumerate(features):
