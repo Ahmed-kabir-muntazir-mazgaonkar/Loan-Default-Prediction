@@ -153,16 +153,15 @@ with col2:
     shap_vals = shap_vals[:len(features)]  # trim to same length
 
        # Show feature impacts
-       for i, feature in enumerate(features):
-           st.write(f"{feature}: {shap_vals[i]:.2f}")
-
-       # SHAP Bar Chart
-       fig2, ax2 = plt.subplots()
-       colors = ['#ff6b6b' if val > 0 else '#51cf66' for val in shap_vals]
-       sns.barplot(x=shap_vals, y=features, palette=colors, ax=ax2)
-       ax2.set_title("Impact on Default Risk (+ increases risk, - decreases risk)")
-       ax2.set_xlabel("SHAP Value (Impact)")
-       st.pyplot(fig2)
+    for i, feature in enumerate(features):
+        st.write(f"{feature}: {shap_vals[i]:.2f}")
+        # SHAP Bar Chart
+    fig2, ax2 = plt.subplots()
+    colors = ['#ff6b6b' if val > 0 else '#51cf66' for val in shap_vals]
+    sns.barplot(x=shap_vals, y=features, palette=colors, ax=ax2)
+    ax2.set_title("Impact on Default Risk (+ increases risk, - decreases risk)")
+    ax2.set_xlabel("SHAP Value (Impact)")
+    st.pyplot(fig2)
 
 # ---------------------------
 # Expanders for Metrics & Info
