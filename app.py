@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import shap
 
 # ---------------------------
 # Page Config
@@ -15,7 +16,7 @@ st.set_page_config(
 )
 
 # ---------------------------
-# Load Model and Scaler (No Cache for Debugging)
+# Load Model and Scaler
 # ---------------------------
 def load_model():
     with open("loan_model.pkl", "rb") as f:
@@ -96,12 +97,10 @@ with col2:
         # New feature: loan_to_income_ratio
         loan_to_income_ratio = loan_amount / (income + 1)
 
-        # Match feature order: ['income', 'loan_amount', 'employment_status', 'loan_to_income_ratio']
+        # Match feature order
         data = np.array([[income, loan_amount, emp, loan_to_income_ratio]])
 
-        # ---------------------------
-        # DEBUG INFO
-        # ---------------------------
+        # Debug Info (optional)
         st.write("Scaler expects features:", scaler.n_features_in_)
         st.write("Input data shape:", data.shape)
 
@@ -114,17 +113,15 @@ with col2:
 
         # Results
         st.subheader("Prediction Results")
-
         if prediction == 1:
             st.error("⚠️ High Default Risk (Probability: {:.1f}%)".format(proba[1]*100))
         else:
             st.success("✅ Low Default Risk (Probability: {:.1f}%)".format(proba[0]*100))
 
-        # Extra warnings (Business Rules)
+        # Business rule warnings
         if loan_amount > income * 50:
             st.warning("⚠️ Loan amount is extremely high compared to income. "
                        "Real-world risk is likely HIGH even if model shows low risk.")
-
         if employment_status == "Unemployed" and prediction == 0:
             st.warning("⚠️ Note: Unemployed applicants usually carry higher risk in real scenarios.")
 
@@ -139,17 +136,26 @@ with col2:
                 ha='center', va='center', color='white', fontsize=12)
         st.pyplot(fig)
 
-        # Feature importance
-        if hasattr(model, 'feature_importances_'):
-            st.subheader("Key Decision Factors")
-            features = ['Income', 'Loan Amount', 'Employment Status', 'Loan-to-Income Ratio']
-            importances = model.feature_importances_
+        # ---------------------------
+        # SHAP Explainability
+        # ---------------------------
+        st.subheader("🔎 Key Decision Factors (Personalized)")
 
-            fig2, ax2 = plt.subplots()
-            sns.barplot(x=importances, y=features, palette='viridis')
-            ax2.set_title('Feature Importance')
-            ax2.set_xlabel('Importance Score')
-            st.pyplot(fig2)
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(data_scaled)
+
+        features = ['Income', 'Loan Amount', 'Employment Status', 'Loan-to-Income Ratio']
+
+        for i, feature in enumerate(features):
+            st.write(f"{feature}: {shap_values[1][0][i]:.2f}")
+
+        fig2, ax2 = plt.subplots()
+        shap_vals = shap_values[1][0]
+        colors = ['#ff6b6b' if val > 0 else '#51cf66' for val in shap_vals]
+        sns.barplot(x=shap_vals, y=features, palette=colors, ax=ax2)
+        ax2.set_title("Impact on Default Risk (+ increases risk, - decreases risk)")
+        ax2.set_xlabel("SHAP Value (Impact)")
+        st.pyplot(fig2)
 
 # ---------------------------
 # Expanders for Metrics & Info
@@ -169,7 +175,7 @@ with st.expander("📊 Model Performance Metrics"):
     """)
 
     cm = np.array([[81, 36],
-                   [26, 57]])  # From your Notebook
+                   [26, 57]])  # From Notebook
     fig3, ax3 = plt.subplots()
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=['Repaid', 'Default'],
@@ -182,20 +188,19 @@ with st.expander("📊 Model Performance Metrics"):
 with st.expander("ℹ️ About This App"):
     st.markdown("""
     ### How It Works
-    This application uses a Random Forest machine learning model trained on historical loan data to predict:
+    This application uses a Random Forest model trained on historical loan data to predict:
     - The probability of loan default
     - Key factors influencing the decision
 
     ### Data Used
-    The model was trained on a dataset containing:
     - Historical loan applications
-    - Balanced representation of default/non-default cases
-    - Features including income, loan amount, employment status, and loan-to-income ratio
+    - Balanced default/non-default cases
+    - Features: income, loan amount, employment status, loan-to-income ratio
 
     ### Limitations
-    - Predictions are based solely on the provided financial information
-    - Does not consider credit history or other potential factors
-    - Accuracy may vary with extreme values
+    - Predictions are based only on financial info
+    - No credit history or other factors
+    - Extreme values may reduce accuracy
     """)
 
 # ---------------------------
