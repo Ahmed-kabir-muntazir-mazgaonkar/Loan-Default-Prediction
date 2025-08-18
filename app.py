@@ -56,7 +56,7 @@ with col1:
         income = st.number_input(
             "Monthly Income ($)",
             min_value=0,
-            max_value=100000,
+            max_value=1000000,
             value=5000,
             step=100
         )
@@ -64,7 +64,7 @@ with col1:
         loan_amount = st.number_input(
             "Loan Amount ($)",
             min_value=0,
-            max_value=500000,
+            max_value=50000000,
             value=20000,
             step=1000
         )
