@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import shap
+from logging import warning
 
 # ---------------------------
 # Page Config
@@ -16,14 +16,19 @@ st.set_page_config(
 )
 
 # ---------------------------
-# Load Model and Scaler
+# Load Model and Scaler (With Caching)
 # ---------------------------
+@st.cache_resource
 def load_model():
-    with open("loan_model.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open("scaler.pkl", "rb") as f:
-        scaler = pickle.load(f)
-    return model, scaler
+    try:
+        with open("loan_model.pkl", "rb") as f:
+            model = pickle.load(f)
+        with open("scaler.pkl", "rb") as f:
+            scaler = pickle.load(f)
+        return model, scaler
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        st.stop()
 
 model, scaler = load_model()
 
@@ -64,24 +69,27 @@ with col1:
 
         income = st.number_input(
             "Monthly Income (₹)",
-            min_value=0,
+            min_value=1000,  # More reasonable minimum
             max_value=200000,
-            value=5000,
-            step=100
+            value=15000,    # More realistic default
+            step=100,
+            help="Gross monthly income in rupees"
         )
 
         loan_amount = st.number_input(
             "Loan Amount (₹)",
-            min_value=0,
+            min_value=1000,
             max_value=5000000,
-            value=20000,
-            step=1000
+            value=100000,
+            step=1000,
+            help="Requested loan amount in rupees"
         )
 
         employment_status = st.selectbox(
             "Employment Status",
             ["Employed", "Unemployed"],
-            index=0
+            index=0,
+            help="Current employment status"
         )
 
         submitted = st.form_submit_button("Predict Risk")
@@ -91,37 +99,50 @@ with col1:
 # ---------------------------
 with col2:
     if submitted:
+        # Validate inputs
+        if income <= 0 or loan_amount <= 0:
+            st.error("Income and loan amount must be positive values")
+            st.stop()
+
         # Encode employment status
         emp = 1 if employment_status == "Employed" else 0
 
-        # New feature: loan_to_income_ratio
-        loan_to_income_ratio = loan_amount / (income + 1)
+        # Calculate loan-to-income ratio with safeguard
+        loan_to_income_ratio = loan_amount / max(income, 1)  # Avoid division by zero
 
-        # Match feature order
-        data = np.array([[income, loan_amount, emp, loan_to_income_ratio]])
+        # Prepare input data
+        try:
+            data = np.array([[income, loan_amount, emp, loan_to_income_ratio]])
+            data_scaled = scaler.transform(data)
+        except Exception as e:
+            st.error(f"Error processing input data: {str(e)}")
+            st.stop()
 
-        # Scale input
-        data_scaled = scaler.transform(data)
+        # Make prediction
+        try:
+            prediction = model.predict(data_scaled)[0]
+            proba = model.predict_proba(data_scaled)[0]
+        except Exception as e:
+            st.error(f"Error making prediction: {str(e)}")
+            st.stop()
 
-        # Prediction
-        prediction = model.predict(data_scaled)[0]
-        proba = model.predict_proba(data_scaled)[0]
-
-        # Results
+        # Display results
         st.subheader("Prediction Results")
+
         if prediction == 1:
-            st.error("⚠️ High Default Risk (Probability: {:.1f}%)".format(proba[1]*100))
+            st.error(f"⚠️ High Default Risk (Probability: {proba[1]*100:.1f}%)")
         else:
-            st.success("✅ Low Default Risk (Probability: {:.1f}%)".format(proba[0]*100))
+            st.success(f"✅ Low Default Risk (Probability: {proba[0]*100:.1f}%)")
 
         # Business rule warnings
         if loan_amount > income * 50:
             st.warning("⚠️ Loan amount is extremely high compared to income. "
-                       "Real-world risk is likely HIGH even if model shows low risk.")
+                      "Real-world risk is likely HIGH even if model shows low risk.")
+
         if employment_status == "Unemployed" and prediction == 0:
             st.warning("⚠️ Note: Unemployed applicants usually carry higher risk in real scenarios.")
 
-        # Probability gauge
+        # Probability visualization
         fig, ax = plt.subplots(figsize=(8, 2))
         ax.barh(['Default Risk'], [proba[1]], color='#ff6b6b' if prediction == 1 else '#51cf66')
         ax.barh(['Default Risk'], [proba[0]], left=[proba[1]], color='#51cf66' if prediction == 0 else '#ff6b6b')
@@ -132,39 +153,20 @@ with col2:
                 ha='center', va='center', color='white', fontsize=12)
         st.pyplot(fig)
 
-        # ---------------------------
-       # ---------------------------
-# SHAP Explainability (Fixed)
-# ---------------------------
-        st.subheader("🔎 Key Decision Factors (Personalized)")
+        # Feature importance (if available)
+        if hasattr(model, 'feature_importances_'):
+            st.subheader("Key Decision Factors")
+            features = ['Income', 'Loan Amount', 'Employment Status', 'Loan-to-Income Ratio']
+            importances = model.feature_importances_
 
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(data_scaled)
-
-        features = ['Income', 'Loan Amount', 'Employment Status', 'Loan-to-Income Ratio']
-        # Handle different SHAP output shapes
-        if isinstance(shap_values, list):
-            shap_vals = shap_values[1][0]   # class 1 (Default)
-        else:
-            shap_vals = shap_values[0]
-
-        # Ensure 1D float array and align with features
-    shap_vals = np.array(shap_vals).flatten()
-    shap_vals = shap_vals[:len(features)]  # trim to same length
-
-       # Show feature impacts
-    for i, feature in enumerate(features):
-        st.write(f"{feature}: {shap_vals[i]:.2f}")
-        # SHAP Bar Chart
-    fig2, ax2 = plt.subplots()
-    colors = ['#ff6b6b' if val > 0 else '#51cf66' for val in shap_vals]
-    sns.barplot(x=shap_vals, y=features, palette=colors, ax=ax2)
-    ax2.set_title("Impact on Default Risk (+ increases risk, - decreases risk)")
-    ax2.set_xlabel("SHAP Value (Impact)")
-    st.pyplot(fig2)
+            fig2, ax2 = plt.subplots()
+            sns.barplot(x=importances, y=features, palette='viridis')
+            ax2.set_title('Feature Importance')
+            ax2.set_xlabel('Importance Score')
+            st.pyplot(fig2)
 
 # ---------------------------
-# Expanders for Metrics & Info
+# Additional Information Sections
 # ---------------------------
 with st.expander("📊 Model Performance Metrics"):
     st.subheader("Model Evaluation")
@@ -181,7 +183,7 @@ with st.expander("📊 Model Performance Metrics"):
     """)
 
     cm = np.array([[81, 36],
-                   [26, 57]])  # From Notebook
+                   [26, 57]])
     fig3, ax3 = plt.subplots()
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=['Repaid', 'Default'],
@@ -194,19 +196,20 @@ with st.expander("📊 Model Performance Metrics"):
 with st.expander("ℹ️ About This App"):
     st.markdown("""
     ### How It Works
-    This application uses a Random Forest model trained on historical loan data to predict:
+    This application uses a Random Forest machine learning model trained on historical loan data to predict:
     - The probability of loan default
     - Key factors influencing the decision
 
     ### Data Used
+    The model was trained on a dataset containing:
     - Historical loan applications
-    - Balanced default/non-default cases
-    - Features: income, loan amount, employment status, loan-to-income ratio
+    - Balanced representation of default/non-default cases
+    - Features including income, loan amount, employment status, and loan-to-income ratio
 
     ### Limitations
-    - Predictions are based only on financial info
-    - No credit history or other factors
-    - Extreme values may reduce accuracy
+    - Predictions are based solely on the provided financial information
+    - Does not consider credit history or other potential factors
+    - Accuracy may vary with extreme values
     """)
 
 # ---------------------------
@@ -220,6 +223,6 @@ st.markdown("""
         padding: 1rem;
         border-radius: 0.5rem;
     }
+    .stAlert { margin-top: 0.5rem; }
 </style>
 """, unsafe_allow_html=True)
-
