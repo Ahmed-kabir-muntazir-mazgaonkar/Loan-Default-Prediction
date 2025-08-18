@@ -3,7 +3,7 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Machine Learning](https://img.shields.io/badge/Machine%20Learning-FF6F00?style=for-the-badge&logo=python&logoColor=white)
-![Built by kabir](https://img.shields.io/badge/Built%20by-Jayesh%20Sharma-important)
+[![Built by kabir](https://img.shields.io/badge/Built%20by-Kabir%20mazgaonkar-important)](https://www.linkedin.com/in/ahmedkabirmazgaonkar)
 
 Developed by **Kabir Mazgaonkar**  
 📧 ahmedkabirmazgaonkar@gmail.com | 🔗 [https://www.linkedin.com/in/ahmedkabirmazgaonkar])
