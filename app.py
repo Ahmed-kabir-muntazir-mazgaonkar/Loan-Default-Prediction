@@ -15,9 +15,8 @@ st.set_page_config(
 )
 
 # ---------------------------
-# Load Model and Scaler
+# Load Model and Scaler (No Cache for Debugging)
 # ---------------------------
-@st.cache_resource
 def load_model():
     with open("loan_model.pkl", "rb") as f:
         model = pickle.load(f)
@@ -99,6 +98,14 @@ with col2:
 
         # Match feature order: ['income', 'loan_amount', 'employment_status', 'loan_to_income_ratio']
         data = np.array([[income, loan_amount, emp, loan_to_income_ratio]])
+
+        # ---------------------------
+        # DEBUG INFO
+        # ---------------------------
+        st.write("Scaler expects features:", scaler.n_features_in_)
+        st.write("Input data shape:", data.shape)
+
+        # Scale input
         data_scaled = scaler.transform(data)
 
         # Prediction
