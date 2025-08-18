@@ -100,10 +100,6 @@ with col2:
         # Match feature order
         data = np.array([[income, loan_amount, emp, loan_to_income_ratio]])
 
-        # Debug Info (optional)
-        st.write("Scaler expects features:", scaler.n_features_in_)
-        st.write("Input data shape:", data.shape)
-
         # Scale input
         data_scaled = scaler.transform(data)
 
@@ -137,7 +133,7 @@ with col2:
         st.pyplot(fig)
 
         # ---------------------------
-        # SHAP Explainability
+        # SHAP Explainability (Fixed)
         # ---------------------------
         st.subheader("🔎 Key Decision Factors (Personalized)")
 
@@ -146,11 +142,18 @@ with col2:
 
         features = ['Income', 'Loan Amount', 'Employment Status', 'Loan-to-Income Ratio']
 
-        for i, feature in enumerate(features):
-            st.write(f"{feature}: {shap_values[1][0][i]:.2f}")
+        # Handle different SHAP output shapes
+        if isinstance(shap_values, list):
+            shap_vals = shap_values[1][0]   # class 1 (Default)
+        else:
+            shap_vals = shap_values[0]
 
+        # Show feature impacts
+        for i, feature in enumerate(features):
+            st.write(f"{feature}: {shap_vals[i]:.2f}")
+
+        # SHAP Bar Chart
         fig2, ax2 = plt.subplots()
-        shap_vals = shap_values[1][0]
         colors = ['#ff6b6b' if val > 0 else '#51cf66' for val in shap_vals]
         sns.barplot(x=shap_vals, y=features, palette=colors, ax=ax2)
         ax2.set_title("Impact on Default Risk (+ increases risk, - decreases risk)")
