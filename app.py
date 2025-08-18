@@ -148,15 +148,12 @@ with col2:
         else:
             shap_vals = shap_values[0]
 
-       # Show feature impacts (force to float)
-        for i, feature in enumerate(features):
-            val = shap_vals[i]
-        if isinstance(val, (list, np.ndarray)):  # agar array mila
-            val = float(val[0])
-        else:
-            val = float(val)
-            st.write(f"{feature}: {val:.2f}")
+        # Ensure 1D float array
+        shap_vals = np.array(shap_vals).flatten()
 
+        # Show feature impacts
+        for i, feature in enumerate(features):
+            st.write(f"{feature}: {shap_vals[i]:.2f}")
 
         # SHAP Bar Chart
         fig2, ax2 = plt.subplots()
@@ -225,3 +222,4 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
