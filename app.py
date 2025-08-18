@@ -54,7 +54,7 @@ with col1:
         st.subheader("Applicant Details")
         
         income = st.number_input(
-            "Monthly Income ($)",
+            "Monthly Income (₹)",
             min_value=0,
             max_value=1000000,
             value=5000,
@@ -62,7 +62,7 @@ with col1:
         )
         
         loan_amount = st.number_input(
-            "Loan Amount ($)",
+            "Loan Amount (₹)",
             min_value=0,
             max_value=50000000,
             value=20000,
