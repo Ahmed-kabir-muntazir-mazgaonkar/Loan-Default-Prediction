@@ -95,7 +95,7 @@ with col2:
             st.error("⚠️ High Default Risk (Probability: {:.1f}%)".format(proba[1]*100))
         else:
             st.success("✅ Low Default Risk (Probability: {:.1f}%)".format(proba[0]*100))
-        
+
         # Show probability gauge
         fig, ax = plt.subplots(figsize=(8, 2))
         ax.barh(['Default Risk'], [proba[1]], color='#ff6b6b' if prediction == 1 else '#51cf66')
