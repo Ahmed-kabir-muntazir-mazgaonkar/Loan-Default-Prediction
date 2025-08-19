@@ -1,12 +1,10 @@
 import streamlit as st
 import pickle
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
 
-# Set page config
+# Page config
 st.set_page_config(
     page_title="Loan Default Predictor",
     page_icon="💰",
@@ -24,7 +22,7 @@ def load_model():
             scaler = pickle.load(f)
         return model, scaler
     except FileNotFoundError:
-        st.error("❌ Model or Scaler file not found! Please ensure 'loan_model.pkl' and 'scaler.pkl' exist in the project folder.")
+        st.error("❌ Model or Scaler file not found! Please ensure 'loan_model.pkl' and 'scaler.pkl' exist.")
         st.stop()
 
 model, scaler = load_model()
@@ -33,7 +31,7 @@ model, scaler = load_model()
 with st.sidebar:
     st.title("💰 Loan Default Predictor")
     st.markdown("""
-    Predict whether a loan applicant is likely to default based on:
+    Predict loan default based on:
     - Income
     - Loan Amount
     - Employment Status
@@ -48,64 +46,47 @@ with st.sidebar:
 
 # Main app
 st.title("Loan Default Prediction Dashboard")
-
-# Create two columns
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    # Input form
     with st.form("prediction_form"):
         st.subheader("Applicant Details")
         
-        income = st.number_input(
-            "Monthly Income ($)", min_value=0, max_value=100000, value=5000, step=100
-        )
-        
-        loan_amount = st.number_input(
-            "Loan Amount ($)", min_value=0, max_value=500000, value=20000, step=1000
-        )
-        
-        employment_status = st.selectbox(
-            "Employment Status", ["Employed", "Unemployed"], index=0
-        )
+        income = st.number_input("Monthly Income ($)", min_value=0, max_value=100000, value=5000, step=100)
+        loan_amount = st.number_input("Loan Amount ($)", min_value=0, max_value=500000, value=20000, step=1000)
+        employment_status = st.selectbox("Employment Status", ["Employed", "Unemployed"], index=0)
 
-        # New Inputs
-        tenure = st.number_input(
-            "Loan Tenure (in months)", min_value=1, max_value=360, value=12, step=1
-        )
-
-        interest_rate = st.number_input(
-            "Annual Interest Rate (%)", min_value=0.0, max_value=50.0, value=10.0, step=0.1
-        )
+        # New inputs
+        tenure = st.number_input("Loan Tenure (months)", min_value=1, max_value=360, value=12, step=1)
+        interest_rate = st.number_input("Annual Interest Rate (%)", min_value=0.0, max_value=50.0, value=10.0, step=0.1)
         
         submitted = st.form_submit_button("Predict Risk")
 
 with col2:
     if submitted:
-        # Process inputs
+        # Process original 3 features for model
         emp = 1 if employment_status == "Employed" else 0
         data = np.array([[income, loan_amount, emp]])
         data_scaled = scaler.transform(data)
         
-        # Make prediction
+        # Model prediction
         prediction = model.predict(data_scaled)[0]
         proba = model.predict_proba(data_scaled)[0]
         
-        # Display prediction result
+        # Display prediction
         st.subheader("Prediction Results")
         if prediction == 1:
             st.error(f"⚠️ High Default Risk (Probability: {proba[1]*100:.1f}%)")
         else:
             st.success(f"✅ Low Default Risk (Probability: {proba[0]*100:.1f}%)")
         
-        # EMI Calculation
+        # EMI calculation
         P = loan_amount
         R = interest_rate / 12 / 100
         N = tenure
         EMI = P * R * (1 + R)**N / ((1 + R)**N - 1) if R != 0 else P / N
         total_payment = EMI * N
 
-        # Display payment details
         st.subheader("💰 Loan Payment Details")
         st.write(f"**Monthly EMI:** ${EMI:.2f}")
         st.write(f"**Total Amount to Pay:** ${total_payment:.2f}")
@@ -119,7 +100,7 @@ with col2:
         ax.set_yticks([])
         ax.text(0.5, 0, f"{proba[1]*100:.1f}% risk", ha='center', va='center', color='white', fontsize=12)
         st.pyplot(fig)
-        
+
         # Feature importance
         if hasattr(model, 'feature_importances_'):
             st.subheader("Key Decision Factors")
