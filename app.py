@@ -18,7 +18,7 @@ st.set_page_config(
 # -------------------------------
 @st.cache_resource
 def load_model():
-    with open("loan_default_model.pkl", "rb") as f:
+    with open("loan_model.pkl", "rb") as f:
         model = pickle.load(f)
     with open("scaler.pkl", "rb") as f:
         scaler = pickle.load(f)
