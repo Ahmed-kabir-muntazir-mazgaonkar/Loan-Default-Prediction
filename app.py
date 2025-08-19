@@ -74,15 +74,14 @@ with col2:
         emp = 1 if employment_status == "Employed" else 0
         input_data = [income, loan_amount, emp]
         
-        # Check scaler expected features
+        # Handle scaler expected features
         expected_features = scaler.n_features_in_
         if len(input_data) < expected_features:
-            # Add default values for missing features
             input_data += [0] * (expected_features - len(input_data))
         
         data = np.array([input_data])
         
-        # Transform data
+        # Transform input
         try:
             data_scaled = scaler.transform(data)
         except Exception as e:
@@ -112,7 +111,14 @@ with col2:
         # Feature importance
         if hasattr(model, 'feature_importances_'):
             st.subheader("Key Decision Factors")
-            features = ['Income', 'Loan Amount', 'Employment Status']
+            
+            # Get feature names
+            try:
+                features = model.feature_names_in_
+            except AttributeError:
+                n_features = len(model.feature_importances_)
+                features = [f'Feature {i+1}' for i in range(n_features)]
+            
             importances = model.feature_importances_
             sorted_idx = np.argsort(importances)
             
