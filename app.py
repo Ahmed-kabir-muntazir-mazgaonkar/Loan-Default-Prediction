@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
 
 # ---------------------------
 # Page Config
@@ -99,27 +100,21 @@ with col2:
         else:
             st.success(f"✅ Low Default Risk (Probability: {proba[0]*100:.1f}%)")
         
-        # Probability bar
-        fig, ax = plt.subplots(figsize=(8, 2))
-        ax.barh(['Default Risk'], [proba[1]], color='#ff6b6b')
-        ax.set_xlim(0, 1)
+        # Gradient probability gauge
+        fig, ax = plt.subplots(figsize=(8, 1.2))
+        cmap = LinearSegmentedColormap.from_list("risk", ["#51cf66", "#ffd43b", "#ff6b6b"])
+        ax.barh([0], [proba[1]], color=cmap(proba[1]), height=0.6)
+        ax.set_xlim(0,1)
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.text(0.5, 0, f"{proba[1]*100:.1f}% risk", ha='center', va='center', color='white', fontsize=12)
+        ax.text(proba[1]/2, 0, f"{proba[1]*100:.1f}% Default Risk", ha='center', va='center', color='white', fontsize=12)
         st.pyplot(fig)
         
         # Feature importance
         if hasattr(model, 'feature_importances_'):
             st.subheader("Key Decision Factors")
-            
-            # Get feature names
-            try:
-                features = model.feature_names_in_
-            except AttributeError:
-                n_features = len(model.feature_importances_)
-                features = [f'Feature {i+1}' for i in range(n_features)]
-            
-            importances = model.feature_importances_
+            features = ['Income', 'Loan Amount', 'Employment Status']
+            importances = model.feature_importances_[:len(features)]
             sorted_idx = np.argsort(importances)
             
             fig2, ax2 = plt.subplots()
