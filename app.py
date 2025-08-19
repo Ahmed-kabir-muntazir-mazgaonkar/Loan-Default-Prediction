@@ -54,7 +54,7 @@ with st.sidebar:
 # ---------------------------
 # Main App
 # ---------------------------
-st.title("Loan Default Prediction Dashboard")
+st.title("Loan Default Prediction")
 
 col1, col2 = st.columns([1, 2])
 
@@ -63,8 +63,8 @@ with col1:
     with st.form("prediction_form"):
         st.subheader("Applicant Details")
         
-        income = st.number_input("Monthly Income ($)", min_value=0, max_value=100000, value=5000, step=100)
-        loan_amount = st.number_input("Loan Amount ($)", min_value=0, max_value=500000, value=20000, step=1000)
+        income = st.number_input("Monthly Income (₹)", min_value=0, max_value=1000000, value=5000, step=1000)
+        loan_amount = st.number_input("Loan Amount (₹)", min_value=0, max_value=5000000, value=20000, step=1000)
         employment_status = st.selectbox("Employment Status", ["Employed", "Unemployed"], index=0)
         
         submitted = st.form_submit_button("Predict Risk")
