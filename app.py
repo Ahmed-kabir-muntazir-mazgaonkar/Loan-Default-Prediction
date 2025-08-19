@@ -1,7 +1,6 @@
 import streamlit as st
 import pickle
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -38,7 +37,7 @@ model, scaler = load_model()
 with st.sidebar:
     st.title("💰 Loan Default Predictor")
     st.markdown("""
-    This app predicts whether a loan applicant is likely to default based on:
+    Predict if a loan applicant is likely to default based on:
     - Income
     - Loan Amount
     - Employment Status
@@ -63,42 +62,38 @@ with col1:
     with st.form("prediction_form"):
         st.subheader("Applicant Details")
         
-        income = st.number_input(
-            "Monthly Income ($)",
-            min_value=0,
-            max_value=100000,
-            value=5000,
-            step=100
-        )
-        
-        loan_amount = st.number_input(
-            "Loan Amount ($)",
-            min_value=0,
-            max_value=500000,
-            value=20000,
-            step=1000
-        )
-        
-        employment_status = st.selectbox(
-            "Employment Status",
-            ["Employed", "Unemployed"],
-            index=0
-        )
+        income = st.number_input("Monthly Income ($)", min_value=0, max_value=100000, value=5000, step=100)
+        loan_amount = st.number_input("Loan Amount ($)", min_value=0, max_value=500000, value=20000, step=1000)
+        employment_status = st.selectbox("Employment Status", ["Employed", "Unemployed"], index=0)
         
         submitted = st.form_submit_button("Predict Risk")
 
 with col2:
     if submitted and model and scaler:
-        # Prepare data
+        # Convert employment status to binary
         emp = 1 if employment_status == "Employed" else 0
-        data = np.array([[income, loan_amount, emp]])
-        data_scaled = scaler.transform(data)
+        input_data = [income, loan_amount, emp]
         
-        # Prediction
+        # Check scaler expected features
+        expected_features = scaler.n_features_in_
+        if len(input_data) < expected_features:
+            # Add default values for missing features
+            input_data += [0] * (expected_features - len(input_data))
+        
+        data = np.array([input_data])
+        
+        # Transform data
+        try:
+            data_scaled = scaler.transform(data)
+        except Exception as e:
+            st.error(f"Error scaling input: {e}")
+            st.stop()
+        
+        # Predict
         prediction = model.predict(data_scaled)[0]
         proba = model.predict_proba(data_scaled)[0]
         
-        # Display result
+        # Show result
         st.subheader("Prediction Results")
         if prediction == 1:
             st.error(f"⚠️ High Default Risk (Probability: {proba[1]*100:.1f}%)")
@@ -157,7 +152,7 @@ with st.expander("📊 Model Performance Metrics"):
 with st.expander("ℹ️ About This App"):
     st.markdown("""
     ### How It Works
-    This application uses a Random Forest model trained on historical loan data to predict:
+    Uses a Random Forest model trained on historical loan data to predict:
     - Probability of loan default
     - Key factors influencing the decision
     
@@ -167,11 +162,10 @@ with st.expander("ℹ️ About This App"):
     - Features: income, loan amount, employment status
     
     ### Limitations
-    - Predictions are based solely on provided financial info
-    - Does not consider credit history or other external factors
+    - Predictions based only on provided financial info
     - Accuracy may vary with extreme values
     
-    For support: support@loanpredictor.com
+    Support: support@loanpredictor.com
     """)
 
 # ---------------------------
